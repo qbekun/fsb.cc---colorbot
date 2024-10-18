@@ -129,7 +129,7 @@ public:
    //         cv::inRange(hsv, lower_color, upper_color, mask);
    //         cv::imshow("HSV View", mask); // Show the mask
     //        if (cv::waitKey(30) >= 0) break; // Break the loop if any key is pressed
-        }
+      //  }
 
    //     cv::destroyWindow("HSV View"); // Close the window
    // }
