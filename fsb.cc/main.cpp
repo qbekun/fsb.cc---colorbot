@@ -47,7 +47,7 @@ public:
 
 
             //hsv color view
-            std::thread(&Colorbot::show_hsv_window, colorbot).detach(); // Start the HSV window in a separate thread
+     //       std::thread(&Colorbot::show_hsv_window, colorbot).detach(); // Start the HSV window in a separate thread
 
 
             colorbot->listen(); // Call listen on the pointer

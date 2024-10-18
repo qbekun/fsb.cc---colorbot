@@ -115,23 +115,23 @@ public:
         // Don't delete settings; assume it is managed elsewhere
     }
 
-    void show_hsv_window() {
-        cv::namedWindow("HSV View", cv::WINDOW_AUTOSIZE); // Create a window for display
-        cv::Mat hsv, mask, screen;
+  //  void show_hsv_window() {
+   //     cv::namedWindow("HSV View", cv::WINDOW_AUTOSIZE); // Create a window for display
+    //    cv::Mat hsv, mask, screen;
 
-        while (true) {
-            screen = capturer->get_screen();
-            if (screen.empty()) continue;
+    //    while (true) {
+    //        screen = capturer->get_screen();
+     //       if (screen.empty()) continue;
 
-            cv::cvtColor(screen, hsv, cv::COLOR_BGR2HSV); // Convert to HSV color space
+    //        cv::cvtColor(screen, hsv, cv::COLOR_BGR2HSV); // Convert to HSV color space
 
             // Create a binary mask where detected colors are white
-            cv::inRange(hsv, lower_color, upper_color, mask);
-            cv::imshow("HSV View", mask); // Show the mask
-            if (cv::waitKey(30) >= 0) break; // Break the loop if any key is pressed
+   //         cv::inRange(hsv, lower_color, upper_color, mask);
+   //         cv::imshow("HSV View", mask); // Show the mask
+    //        if (cv::waitKey(30) >= 0) break; // Break the loop if any key is pressed
         }
 
-        cv::destroyWindow("HSV View"); // Close the window
+   //     cv::destroyWindow("HSV View"); // Close the window
     }
 
 

@@ -85,26 +85,26 @@ public:
             return cv::Mat();
         }
 
-        cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR); // Konwertuj BGRA na BGR
+        cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR); // Convert BGRA to BGR
 
-        // Konwersja obrazu na przestrzeń HSV
+        // Image conversion to HSV space
         cv::Mat hsv_image;
         cv::cvtColor(mat, hsv_image, cv::COLOR_BGR2HSV);
 
-        // Tworzenie maski dla koloru z użyciem ustawionych zakresów
+        // Create a mask for a color using preset ranges
         cv::Mat mask;
         cv::inRange(hsv_image, lower_color, upper_color, mask);
 
-        // Operacje morfologiczne w celu eliminacji szumów
+        // Morphological operations to eliminate noise
         cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
         cv::dilate(mask, mask, kernel);
         cv::erode(mask, mask, kernel);
 
-        // Zastosowanie maski na oryginalnym obrazie
+        // Applying the mask to the original image
         cv::Mat result;
         cv::bitwise_and(mat, mat, result, mask);
 
-        // Dodaj rozmycie gaussowskie dla lepszego filtrowania szumów
+        // Add Gaussian blur for better noise filtering
         cv::GaussianBlur(result, result, cv::Size(5, 5), 0);
 
         return result;
