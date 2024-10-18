@@ -1,12 +1,15 @@
-#ifndef CAPTURE_H
+﻿#ifndef CAPTURE_H
 #define CAPTURE_H
 
 #include <opencv2/opencv.hpp>
 #include <Windows.h>
+#include <iostream>
 
 class Capture {
 private:
     RECT monitor;
+    cv::Scalar lower_color;  // Zakres dolny koloru
+    cv::Scalar upper_color;  // Zakres górny koloru
 
     class HDCWrapper {
     public:
@@ -34,23 +37,32 @@ public:
         monitor.bottom = y + y_fov;
     }
 
+    void setColorRanges(const cv::Scalar& lower, const cv::Scalar& upper) {
+        lower_color = lower;
+        upper_color = upper;
+    }
+
     cv::Mat get_screen() {
         HDCWrapper hScreenDC(GetDC(NULL));
         HDCWrapper hMemoryDC(CreateCompatibleDC(hScreenDC.hdc));
+
         int width = monitor.right - monitor.left;
         int height = monitor.bottom - monitor.top;
 
         HBITMAPWrapper hBitmap(CreateCompatibleBitmap(hScreenDC.hdc, width, height));
         if (!hBitmap.hbitmap) {
+            std::cerr << "CreateCompatibleBitmap failed" << std::endl;
             return cv::Mat();
         }
 
         HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC.hdc, hBitmap.hbitmap);
         if (!hOldBitmap) {
+            std::cerr << "SelectObject failed" << std::endl;
             return cv::Mat();
         }
 
         if (!BitBlt(hMemoryDC.hdc, 0, 0, width, height, hScreenDC.hdc, monitor.left, monitor.top, SRCCOPY)) {
+            std::cerr << "BitBlt failed" << std::endl;
             return cv::Mat();
         }
 
@@ -69,10 +81,33 @@ public:
 
         cv::Mat mat(height, width, CV_8UC4);
         if (!GetDIBits(hMemoryDC.hdc, hBitmap.hbitmap, 0, height, mat.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS)) {
+            std::cerr << "GetDIBits failed" << std::endl;
             return cv::Mat();
         }
 
-        return mat;
+        cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR); // Konwertuj BGRA na BGR
+
+        // Konwersja obrazu na przestrzeń HSV
+        cv::Mat hsv_image;
+        cv::cvtColor(mat, hsv_image, cv::COLOR_BGR2HSV);
+
+        // Tworzenie maski dla koloru z użyciem ustawionych zakresów
+        cv::Mat mask;
+        cv::inRange(hsv_image, lower_color, upper_color, mask);
+
+        // Operacje morfologiczne w celu eliminacji szumów
+        cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+        cv::dilate(mask, mask, kernel);
+        cv::erode(mask, mask, kernel);
+
+        // Zastosowanie maski na oryginalnym obrazie
+        cv::Mat result;
+        cv::bitwise_and(mat, mat, result, mask);
+
+        // Dodaj rozmycie gaussowskie dla lepszego filtrowania szumów
+        cv::GaussianBlur(result, result, cv::Size(5, 5), 0);
+
+        return result;
     }
 };
 
