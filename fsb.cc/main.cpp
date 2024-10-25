@@ -47,7 +47,8 @@ public:
 
 
             //hsv color view
-     //       std::thread(&Colorbot::show_hsv_window, colorbot).detach(); // Start the HSV window in a separate thread
+
+            //std::thread(&Colorbot::show_hsv_window, colorbot).detach(); // Start the HSV window in a separate thread
 
 
             colorbot->listen(); // Call listen on the pointer
@@ -159,6 +160,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
+void DisplayMessage() {
+    freopen("CONOUT$", "w", stdout); // Redirect stdout to console
+    std::cout << R"( 
+   ___         __                            
+ /'___\       /\ \                           
+/\ \__/   ____\ \ \____        ___     ___   
+\ \ ,__\ /',__\\ \ '__`\      /'___\  /'___\ 
+ \ \ \_//\__, `\\ \ \L\ \ __ /\ \__/ /\ \__/ 
+  \ \_\ \/\____/ \ \_,__//\_\\ \____\\ \____\
+   \/_/  \/___/   \/___/ \/_/ \/____/ \/____/
+    )" << std::endl;
+
+    std::cout << "                     - Enemy Outline Color: Purple" << std::endl;
+}
+
 // Function to show/hide the console window
 void ToggleConsoleWindow() {
     static bool consoleVisible = false;
@@ -166,7 +182,7 @@ void ToggleConsoleWindow() {
     if (consoleVisible) {
         AllocConsole();
         ShowConsoleWindow(true);
-        DisplayMessage("fsb.cc - Enemy Outline Color: Purple");
+        DisplayMessage();
     }
     else {
         FreeConsole();

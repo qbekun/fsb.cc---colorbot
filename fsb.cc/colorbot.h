@@ -9,6 +9,7 @@
 #include "Mouse.h"
 #include "Settings.h"
 
+
 class Colorbot {
 private:
     Capture* capturer;   // Pointer to Capture class
@@ -40,7 +41,6 @@ private:
     float magnet_smooth;
     int magnet_fov;
 
-
     cv::Mat kernel;
     cv::Point screen_center;
     cv::Point prev_center;  // Previous aim center for smoothing
@@ -61,10 +61,17 @@ public:
         mouse = new Mouse(*settings); // Pass settings by reference
 
         // Initialize color ranges
+
+        //Purple
         lower_color = cv::Scalar(150, 76, 123);
         upper_color = cv::Scalar(160, 197, 255);
 
+        // Red
+        //lower_color = cv::Scalar(0, 170, 150);
+        //upper_color = cv::Scalar(5, 255, 255);
+
         capturer->setColorRanges(lower_color, upper_color);
+
 
         // Aimbot settings
         aim_enabled = settings->get_boolean("Aimbot", "Enabled");
@@ -115,24 +122,20 @@ public:
         // Don't delete settings; assume it is managed elsewhere
     }
 
-  //  void show_hsv_window() {
-   //     cv::namedWindow("HSV View", cv::WINDOW_AUTOSIZE); // Create a window for display
-    //    cv::Mat hsv, mask, screen;
+    /*void show_hsv_window() {
+        cv::namedWindow("HSV View", cv::WINDOW_AUTOSIZE); // Create a window for display
+        cv::Mat hsv, mask, screen;
+        while (true) {
+            screen = capturer->get_screen();
+            if (screen.empty()) continue;
+            cv::cvtColor(screen, hsv, cv::COLOR_BGR2HSV); // Convert to HSV color space
+            cv::inRange(hsv, lower_color, upper_color, mask); // Create a binary mask where detected colors are white
+            cv::imshow("HSV View", mask); // Show the mask
+            if (cv::waitKey(30) >= 0) break; // Break the loop if any key is pressed
+        }
+        cv::destroyWindow("HSV View"); // Close the window
+    } */
 
-    //    while (true) {
-    //        screen = capturer->get_screen();
-     //       if (screen.empty()) continue;
-
-    //        cv::cvtColor(screen, hsv, cv::COLOR_BGR2HSV); // Convert to HSV color space
-
-            // Create a binary mask where detected colors are white
-   //         cv::inRange(hsv, lower_color, upper_color, mask);
-   //         cv::imshow("HSV View", mask); // Show the mask
-    //        if (cv::waitKey(30) >= 0) break; // Break the loop if any key is pressed
-      //  }
-
-   //     cv::destroyWindow("HSV View"); // Close the window
-   // }
 
 
     void listen_bunny_hop() {
@@ -209,35 +212,30 @@ public:
     }
 
     void process(const std::string& action) {
-        // Convert the captured screen to HSV color space
-        cv::Mat hsv;
         cv::Mat screen = capturer->get_screen();
         if (screen.empty()) {
             return;
         }
+
+        cv::Mat hsv, mask, dilated, thresh;
         cv::cvtColor(screen, hsv, cv::COLOR_BGR2HSV);
-        // Create a binary mask where detected colors are white
-        cv::Mat mask;
         cv::inRange(hsv, lower_color, upper_color, mask);
-        // Dilate the mask
-        cv::Mat dilated;
         cv::dilate(mask, dilated, kernel, cv::Point(-1, -1), 5);
-        // Thresholding
-        cv::Mat thresh;
         cv::threshold(dilated, thresh, 60, 255, cv::THRESH_BINARY);
-        // Find contours
+
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+
         if (!contours.empty()) {
             double min_distance = std::numeric_limits<double>::infinity();
             cv::Point closest_center;
+
             for (const auto& contour : contours) {
-                // Find the contour closest to the center of the screen
                 cv::Moments moments = cv::moments(contour);
-                if (moments.m00 != 0) {  // Avoid division by zero
+                if (moments.m00 != 0) {
                     cv::Point center(static_cast<int>(moments.m10 / moments.m00), static_cast<int>(moments.m01 / moments.m00));
                     double distance = cv::norm(center - screen_center);
-                    // Update the closest center if the distance is smaller
+
                     if (distance < min_distance) {
                         min_distance = distance;
                         closest_center = center;
@@ -267,14 +265,17 @@ public:
                     }
                 }
                 else if (action == "magnet") {
-                    // Calculate the difference between the center of the screen and the detected target
-                    int x_diff = closest_center.x - screen_center.x;
-                    int y_diff = closest_center.y - screen_center.y;
+                    int cX = closest_center.x;
+                    int cY = closest_center.y - static_cast<int>(target_offset);
+                        // Calculate the difference between the center of the screen and the detected target
+                        int x_diff = cX - screen_center.x;
+                        int y_diff = cY - screen_center.y;
+
                     // Move the mouse smoothly towards the target
-                    mouse->move(magnet_smooth * x_diff, magnet_smooth * y_diff);
+                    mouse->move(x_diff, y_diff);
 
                     // Check if the target is within the trigger range (you can adjust the range values)
-                    int trigger_range = 10;  // Example range value
+                    int trigger_range = 15;  // Example range value
                     if (std::abs(x_diff) <= trigger_range && std::abs(y_diff) <= trigger_range) {
                         mouse->click();  // Automatically fire if within range
                     }

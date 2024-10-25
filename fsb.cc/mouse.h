@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <serial.h>
 #include "settings.h" // Assuming settings.h exists for the Settings class
+#include <serial.h>
 
 class Mouse {
 private:

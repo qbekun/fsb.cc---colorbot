@@ -4,37 +4,18 @@
 #include <opencv2/opencv.hpp>
 #include <Windows.h>
 #include <iostream>
+#include <thread>
+#include <mutex>
 
 class Capture {
 private:
     RECT monitor;
-    cv::Scalar lower_color;  // Zakres dolny koloru
-    cv::Scalar upper_color;  // Zakres górny koloru
-
-    class HDCWrapper {
-    public:
-        HDC hdc;
-        HDCWrapper(HDC hdc) : hdc(hdc) {}
-        ~HDCWrapper() {
-            if (hdc) DeleteDC(hdc);
-        }
-    };
-
-    class HBITMAPWrapper {
-    public:
-        HBITMAP hbitmap;
-        HBITMAPWrapper(HBITMAP hbitmap) : hbitmap(hbitmap) {}
-        ~HBITMAPWrapper() {
-            if (hbitmap) DeleteObject(hbitmap);
-        }
-    };
+    cv::Scalar lower_color;  // Dolny zakres kolorów
+    cv::Scalar upper_color;  // Górny zakres kolorów
 
 public:
     Capture(int x, int y, int x_fov, int y_fov) {
-        monitor.left = x;
-        monitor.top = y;
-        monitor.right = x + x_fov;
-        monitor.bottom = y + y_fov;
+        monitor = { x, y, x + x_fov, y + y_fov }; // Inicjalizacja prostokąta
     }
 
     void setColorRanges(const cv::Scalar& lower, const cv::Scalar& upper) {
@@ -43,71 +24,58 @@ public:
     }
 
     cv::Mat get_screen() {
-        HDCWrapper hScreenDC(GetDC(NULL));
-        HDCWrapper hMemoryDC(CreateCompatibleDC(hScreenDC.hdc));
+        const int width = monitor.right - monitor.left;
+        const int height = monitor.bottom - monitor.top;
 
-        int width = monitor.right - monitor.left;
-        int height = monitor.bottom - monitor.top;
+        // Przechwytywanie ekranu
+        HDC hScreenDC = GetDC(NULL);
+        HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
+        HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, width, height);
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
 
-        HBITMAPWrapper hBitmap(CreateCompatibleBitmap(hScreenDC.hdc, width, height));
-        if (!hBitmap.hbitmap) {
-            std::cerr << "CreateCompatibleBitmap failed" << std::endl;
-            return cv::Mat();
-        }
+        BitBlt(hMemoryDC, 0, 0, width, height, hScreenDC, monitor.left, monitor.top, SRCCOPY);
 
-        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC.hdc, hBitmap.hbitmap);
-        if (!hOldBitmap) {
-            std::cerr << "SelectObject failed" << std::endl;
-            return cv::Mat();
-        }
-
-        if (!BitBlt(hMemoryDC.hdc, 0, 0, width, height, hScreenDC.hdc, monitor.left, monitor.top, SRCCOPY)) {
-            std::cerr << "BitBlt failed" << std::endl;
-            return cv::Mat();
-        }
-
-        BITMAPINFOHEADER bi;
+        // Przygotowanie nagłówka informacji bitmapy
+        BITMAPINFOHEADER bi = {};
         bi.biSize = sizeof(BITMAPINFOHEADER);
         bi.biWidth = width;
-        bi.biHeight = -height;
+        bi.biHeight = -height; // Ujemna wysokość, aby obraz był właściwie ustawiony
         bi.biPlanes = 1;
         bi.biBitCount = 32;
         bi.biCompression = BI_RGB;
-        bi.biSizeImage = 0;
-        bi.biXPelsPerMeter = 0;
-        bi.biYPelsPerMeter = 0;
-        bi.biClrUsed = 0;
-        bi.biClrImportant = 0;
 
         cv::Mat mat(height, width, CV_8UC4);
-        if (!GetDIBits(hMemoryDC.hdc, hBitmap.hbitmap, 0, height, mat.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS)) {
-            std::cerr << "GetDIBits failed" << std::endl;
-            return cv::Mat();
-        }
+        GetDIBits(hMemoryDC, hBitmap, 0, height, mat.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-        cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR); // Convert BGRA to BGR
+        // Sprzątanie obiektów GDI
+        SelectObject(hMemoryDC, hOldBitmap);
+        DeleteObject(hBitmap);
+        DeleteDC(hMemoryDC);
+        ReleaseDC(NULL, hScreenDC);
 
-        // Image conversion to HSV space
+        // Konwersja BGRA na BGR
+        cv::cvtColor(mat, mat, cv::COLOR_BGRA2BGR);
+
+        // Przetwarzanie obrazu w HSV
         cv::Mat hsv_image;
         cv::cvtColor(mat, hsv_image, cv::COLOR_BGR2HSV);
 
-        // Create a mask for a color using preset ranges
+        // Tworzenie maski dla koloru
         cv::Mat mask;
         cv::inRange(hsv_image, lower_color, upper_color, mask);
 
-        // Morphological operations to eliminate noise
+        // Operacje morfologiczne, aby zlikwidować szum
         cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
-        cv::dilate(mask, mask, kernel);
-        cv::erode(mask, mask, kernel);
+        cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, kernel); // Użycie operacji zamknięcia
 
-        // Applying the mask to the original image
+        // Zastosowanie maski do oryginalnego obrazu
         cv::Mat result;
         cv::bitwise_and(mat, mat, result, mask);
 
         // Add Gaussian blur for better noise filtering
         cv::GaussianBlur(result, result, cv::Size(5, 5), 0);
 
-        return result;
+        return result; // Zwrócenie przetworzonego obrazu
     }
 };
 

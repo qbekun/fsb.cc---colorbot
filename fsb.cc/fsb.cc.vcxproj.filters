@@ -52,4 +52,9 @@
       <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\..\..\..\..\..\dev\serial\visual_studio\x64\Release\serial.lib">
+      <Filter>serial</Filter>
+    </Library>
+  </ItemGroup>
 </Project>
