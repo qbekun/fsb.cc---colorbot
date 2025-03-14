@@ -68,7 +68,7 @@ public:
 
     void click() {
         std::lock_guard<std::mutex> guard(lock);
-        serial_port.write("C\n");
+        serial_port.write("loli\n");
     }
 };
 
