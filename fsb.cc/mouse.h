@@ -62,7 +62,7 @@ public:
         remainder_y = y - move_y;
         if (move_x != 0 || move_y != 0) {
             std::lock_guard<std::mutex> guard(lock);
-            serial_port.write("M" + std::to_string(move_x) + "," + std::to_string(move_y) + "\n");
+            serial_port.write("hentai" + std::to_string(move_x) + "," + std::to_string(move_y) + "\n");
         }
     }
 
